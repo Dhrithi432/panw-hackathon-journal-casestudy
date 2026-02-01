@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api import chat
 
 app = FastAPI(title="MindSpace Journal API")
 
-# CORS middleware to allow frontend to connect
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -11,6 +12,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(chat.router, prefix="/api", tags=["chat"])
 
 @app.get("/")
 async def root():
