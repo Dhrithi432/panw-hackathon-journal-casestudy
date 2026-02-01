@@ -87,9 +87,9 @@ export const LoginPage: React.FC = () => {
           </form>
         </Card>
         
-        <p className="text-center text-sm mt-4 opacity-70">
+        {/* <p className="text-center text-sm mt-4 opacity-70">
           Note: This is a demo login - no real authentication
-        </p>
+        </p> */}
       </div>
     </div>
   );
