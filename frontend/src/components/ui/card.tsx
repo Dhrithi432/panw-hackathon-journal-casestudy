@@ -62,8 +62,6 @@ interface CardDescriptionProps {
 }
 
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className }) => {
-  const { isDark } = useTheme();
-  
   return (
     <p 
       className={cn('text-sm mt-1', className)}
@@ -106,5 +104,3 @@ export const CardFooter: React.FC<CardFooterProps> = ({ children, className }) =
     </div>
   );
 };
-
-export { useTheme };
