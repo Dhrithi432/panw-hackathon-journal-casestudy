@@ -1,0 +1,37 @@
+/* Light mode (default) */
+:root:not(.dark) {
+    --color-bg-primary: 249 250 251;
+    --color-bg-secondary: 255 255 255;
+    --color-text-primary: 17 24 39;
+    --color-text-secondary: 75 85 99;
+    --color-border: 229 231 235;
+  }
+  
+  /* Dark mode */
+  :root.dark {
+    --color-bg-primary: 17 24 39;
+    --color-bg-secondary: 31 41 55;
+    --color-text-primary: 249 250 251;
+    --color-text-secondary: 156 163 175;
+    --color-border: 55 65 81;
+  }
+  
+  .bg-primary {
+    background-color: rgb(var(--color-bg-primary));
+  }
+  
+  .bg-secondary {
+    background-color: rgb(var(--color-bg-secondary));
+  }
+  
+  .text-primary {
+    color: rgb(var(--color-text-primary));
+  }
+  
+  .text-secondary {
+    color: rgb(var(--color-text-secondary));
+  }
+  
+  .border-custom {
+    border-color: rgb(var(--color-border));
+  }
