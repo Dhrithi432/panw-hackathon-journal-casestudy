@@ -1,13 +1,10 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/context/ThemeContext';
 import { Calendar, MessageSquare } from 'lucide-react';
 
 export const EntriesPage: React.FC = () => {
-  const { isDark } = useTheme();
-
-  // Mock data - we'll connect to real data later
+  // Mock data
   const mockEntries = [
     {
       id: '1',
@@ -52,23 +49,20 @@ export const EntriesPage: React.FC = () => {
           <Card key={entry.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1">
                   <CardTitle>{entry.title}</CardTitle>
                   <CardDescription>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {entry.date.toLocaleDateString()}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="h-4 w-4" />
-                        {entry.messageCount} messages
-                      </span>
-                    </div>
+                    <span className="flex items-center gap-1 mt-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>{entry.date.toLocaleDateString()}</span>
+                      <span className="mx-2">•</span>
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{entry.messageCount} messages</span>
+                    </span>
                   </CardDescription>
                 </div>
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 rounded-full flex-shrink-0 mt-1"
                   style={{ backgroundColor: getSentimentColor(entry.sentiment) }}
                   title={`Sentiment: ${entry.sentiment}`}
                 />
