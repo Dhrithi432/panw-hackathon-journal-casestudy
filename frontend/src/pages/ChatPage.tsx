@@ -1,20 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send } from 'lucide-react';
+import { Send, Loader2, Plus } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import type { ChatMessage } from '@/types';
 import { generateId } from '@/lib/utils';
+import { apiService } from '@/services/api';
 
 export const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingPrompt, setLoadingPrompt] = useState(true);
+  const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const { isDark } = useTheme();
+  const { user } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Load current session or create new one
+  useEffect(() => {
+    const loadSession = async () => {
+      // Get current session ID from localStorage
+      const savedSessionId = localStorage.getItem('mindspace-current-session');
+      
+      if (savedSessionId) {
+        // Load existing session
+        const savedMessages = localStorage.getItem(`mindspace-session-${savedSessionId}`);
+        if (savedMessages) {
+          const parsedMessages = JSON.parse(savedMessages, (key, value) => {
+            if (key === 'timestamp') return new Date(value);
+            return value;
+          });
+          setMessages(parsedMessages);
+          setCurrentSessionId(savedSessionId);
+          setLoadingPrompt(false);
+          return;
+        }
+      }
+
+      // Create new session
+      const newSessionId = generateId();
+      setCurrentSessionId(newSessionId);
+      localStorage.setItem('mindspace-current-session', newSessionId);
+
+      // Load opening prompt
+      try {
+        const prompt = await apiService.getOpeningPrompt();
+        const aiMessage: ChatMessage = {
+          id: generateId(),
+          role: 'assistant',
+          content: prompt,
+          timestamp: new Date(),
+        };
+        setMessages([aiMessage]);
+        saveMessages([aiMessage], newSessionId);
+      } catch (error) {
+        console.error('Failed to load opening prompt:', error);
+        const aiMessage: ChatMessage = {
+          id: generateId(),
+          role: 'assistant',
+          content: "Hi! I'm here to listen. What's on your mind?",
+          timestamp: new Date(),
+        };
+        setMessages([aiMessage]);
+        saveMessages([aiMessage], newSessionId);
+      } finally {
+        setLoadingPrompt(false);
+      }
+    };
+
+    loadSession();
+  }, []);
+
+  // Save messages to localStorage
+  const saveMessages = (msgs: ChatMessage[], sessionId: string) => {
+    localStorage.setItem(`mindspace-session-${sessionId}`, JSON.stringify(msgs));
+  };
+
+  // Start new conversation
+  const startNewConversation = async () => {
+    const newSessionId = generateId();
+    setCurrentSessionId(newSessionId);
+    localStorage.setItem('mindspace-current-session', newSessionId);
+    
+    setLoadingPrompt(true);
+    try {
+      const prompt = await apiService.getOpeningPrompt();
+      const aiMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: prompt,
+        timestamp: new Date(),
+      };
+      setMessages([aiMessage]);
+      saveMessages([aiMessage], newSessionId);
+    } catch (error) {
+      const aiMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: "Hi! I'm here to listen. What's on your mind?",
+        timestamp: new Date(),
+      };
+      setMessages([aiMessage]);
+      saveMessages([aiMessage], newSessionId);
+    } finally {
+      setLoadingPrompt(false);
+    }
+  };
 
   const handleSend = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: generateId(),
@@ -23,21 +129,46 @@ export const ChatPage: React.FC = () => {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    saveMessages(updatedMessages, currentSessionId);
     setInputText('');
     setIsLoading(true);
 
-    // Simulate AI response (we'll connect to real API later)
-    setTimeout(() => {
+    try {
+      const apiMessages = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      const responseText = await apiService.sendMessage(apiMessages, user?.id || 'anonymous');
+
       const aiMessage: ChatMessage = {
         id: generateId(),
         role: 'assistant',
-        content: "I'm here to listen. This is a placeholder response - we'll connect to the real AI API in the backend setup!",
+        content: responseText,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, aiMessage]);
+
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+      saveMessages(finalMessages, currentSessionId);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again.",
+        timestamp: new Date(),
+      };
+      
+      const finalMessages = [...updatedMessages, errorMessage];
+      setMessages(finalMessages);
+      saveMessages(finalMessages, currentSessionId);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -47,60 +178,71 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  if (loadingPrompt) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#9333ea' }} />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold">New Journal Entry</h2>
-        <p className="text-sm opacity-70">Chat with your AI companion</p>
+      <div className="mb-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Journal Entry</h2>
+          <p className="text-sm opacity-70">Chat with your AI companion</p>
+        </div>
+        <Button 
+          variant="secondary" 
+          size="sm"
+          onClick={startNewConversation}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Entry
+        </Button>
       </div>
 
       {/* Messages Area */}
       <Card className="flex-1 mb-4 overflow-hidden flex flex-col">
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center opacity-50">
-                <p className="text-lg mb-2">Start your journaling session</p>
-                <p className="text-sm">Share what's on your mind...</p>
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className="max-w-[80%] rounded-2xl px-4 py-3"
+                style={{
+                  backgroundColor: msg.role === 'user' 
+                    ? '#9333ea' 
+                    : (isDark ? '#374151' : '#f3f4f6'),
+                  color: msg.role === 'user' 
+                    ? '#ffffff' 
+                    : (isDark ? '#f9fafb' : '#111827'),
+                }}
+              >
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="text-xs mt-1 opacity-70">
+                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
             </div>
-          ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className="max-w-[80%] rounded-2xl px-4 py-3"
-                  style={{
-                    backgroundColor: msg.role === 'user' 
-                      ? '#9333ea' 
-                      : (isDark ? '#374151' : '#f3f4f6'),
-                    color: msg.role === 'user' 
-                      ? '#ffffff' 
-                      : (isDark ? '#f9fafb' : '#111827'),
-                  }}
-                >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <p className="text-xs mt-1 opacity-70">
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
+          ))}
           {isLoading && (
             <div className="flex justify-start">
               <div
-                className="rounded-2xl px-4 py-3"
+                className="rounded-2xl px-4 py-3 flex items-center gap-2"
                 style={{
                   backgroundColor: isDark ? '#374151' : '#f3f4f6',
                 }}
               >
+                <Loader2 className="h-4 w-4 animate-spin" />
                 <p>Thinking...</p>
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </CardContent>
       </Card>
 
@@ -112,13 +254,14 @@ export const ChatPage: React.FC = () => {
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyPress}
           className="flex-1"
+          disabled={isLoading}
         />
         <Button 
           onClick={handleSend} 
           disabled={!inputText.trim() || isLoading}
           variant="primary"
         >
-          <Send className="h-5 w-5" />
+          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </Button>
       </div>
     </div>

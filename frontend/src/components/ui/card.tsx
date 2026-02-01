@@ -106,3 +106,5 @@ export const CardFooter: React.FC<CardFooterProps> = ({ children, className }) =
     </div>
   );
 };
+
+export { useTheme };
