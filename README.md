@@ -1,4 +1,4 @@
-# **safespace** 🌱💜
+# **safespace** 🌱💜 
 
 **safespace** is a personal AI journal companion where you can reflect in conversation with a supportive listener.  
 It helps you capture thoughts, revisit past entries, and see gentle insights about your journaling journey—all in one calm place.
@@ -8,7 +8,8 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 > *"Every thought is a seed. Give it a little light, a little care, and watch what grows."* 🌱
 
 ---
-
+- https://panw-hackathon-journal-casestudy.vercel.app/
+- 
 ## What It Does
 
 - **New Entry** — Start a chat-style journal session with **Mira**, an empathetic AI companion. She greets you, asks follow-ups, and keeps the tone warm and non-judgmental. Each conversation is saved as a journal entry.
