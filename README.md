@@ -9,11 +9,36 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 
 ---
 - https://panw-hackathon-journal-casestudy.vercel.app/
+
+## Features
+
+- 🤖 **AI Chat Companion** - Journal through natural conversation with Claude
+- 💭 **Smart Insights** - AI analyzes your entries to find patterns and themes
+- 🌸 **Word Cloud Visualization** - See your dominant themes at a glance
+- 🌟 **Theme Constellation** - Discover connections between different aspects of your life
+- 🌓 **Dark Mode** - Easy on the eyes, day or night
+- 💾 **Persistent Storage** - Your entries are saved locally
+
+## 📸 Screenshots
+
+### Login Page
+![Login Page](screenshots/login.png)
+
+### Chat Interface
+![Chat Interface](screenshots/chatbot.png)
+
+### Journal Entries
+![Entries List](screenshots/entries.png)
+
+### AI Insights Dashboard
+![Insights Dashboard](screenshots/dashboard.png)
+
+
 ## What It Does
 
 - **New Entry** — Start a chat-style journal session with **Mira**, an empathetic AI companion. She greets you, asks follow-ups, and keeps the tone warm and non-judgmental. Each conversation is saved as a journal entry.
 - **My Entries** — Browse all past journal sessions. Open any entry to continue or reread, or remove entries you no longer need. Entries are listed by date with a short preview.
-- **Insights** — See a simple dashboard of your journaling habits: total reflections, active days, longest conversation, and most active day. Friendly, AI-style insights and milestones encourage you to keep going.
+- **Insights** — See a dashboard of your journaling habits: total reflections, active days, longest conversation, and most active day. **Word Cloud** shows your central theme with related words orbiting around it (driven by Claude’s analysis of your entries). **Theme Constellation** displays core themes with sentiment, frequency, and connections between themes. You also get an AI narrative, a hidden pattern, and a reflection question to keep the practice going.
 - **Theme & identity** — Toggle between light and dark mode. Sign in with a username and email (stored locally) so the app can greet you and keep your data tied to your session.
 
 ---
@@ -27,7 +52,7 @@ The app is built to be **simple, fast, and easy to understand**. The frontend fo
 - **Conversations that flow** — Journal entries are chat threads with the AI, so writing feels like talking to someone who listens and reflects back.
 - **Local-first for now** — User identity and journal sessions live in the browser (e.g. localStorage) so you can run and demo the app without a database. The backend is used for the AI only.
 - **Single AI persona** — One companion (Mira) with a fixed, supportive personality keeps the experience consistent and safe (e.g. no medical advice, gentle signposting if someone is in distress).
-- **Insights from your data** — The Insights page derives stats and encouragement from your stored sessions so the app feels responsive to your own history.
+- **Insights from your data** — The Insights page derives stats from your stored sessions and sends a summary to the AI for deeper analysis. Claude returns a central theme and related words (powering the **Word Cloud**) and core themes with connections (the **Theme Constellation**), plus narrative, hidden pattern, and a reflection question—so the app feels responsive to your own history.
 
 ---
 
@@ -45,6 +70,7 @@ The app is built to be **simple, fast, and easy to understand**. The frontend fo
 
 - **POST `/api/chat`** — Sends the current conversation (messages + user id) to the AI and returns Mira’s reply and a timestamp.
 - **GET `/api/opening-prompt`** — Returns the initial greeting message shown when you start a new journal entry.
+- **POST `/api/insights/unified`** — Sends a summary of your entries (dates, message counts, sample user messages) to the AI and returns unified insights: central theme, related words for the **Word Cloud**, core themes and connections for the **Theme Constellation**, plus narrative, hidden pattern, and reflection question.
 
 The backend also exposes a root message and a **GET `/health`** endpoint for liveness checks.
 
@@ -63,3 +89,6 @@ The backend also exposes a root message and a **GET `/health`** endpoint for liv
 ## Summary
 
 **safespace** is a minimal, feature-driven journaling app: chat with an AI companion, keep all entries in one place, and get light insights and encouragement—all wrapped in a calm, readable UI with theme support and a clear path from “new entry” to “insights.” The stack is chosen for clarity and maintainability, and the AI is designed to stay supportive and bounded. 🌱
+
+
+
