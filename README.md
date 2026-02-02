@@ -9,7 +9,6 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 
 ---
 - https://panw-hackathon-journal-casestudy.vercel.app/
-- 
 ## What It Does
 
 - **New Entry** — Start a chat-style journal session with **Mira**, an empathetic AI companion. She greets you, asks follow-ups, and keeps the tone warm and non-judgmental. Each conversation is saved as a journal entry.
