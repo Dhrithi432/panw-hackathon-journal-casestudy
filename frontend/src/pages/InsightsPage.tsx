@@ -96,19 +96,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Sparkles, Calendar, MessageSquare, TrendingUp, Brain, Heart } from 'lucide-react';
+import { Sparkles, Calendar, MessageSquare, Brain, Heart } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 export const InsightsPage: React.FC = () => {
   const { isDark } = useTheme();
-  const [sessions, setSessions] = useState<any[]>([]);
   const [insights, setInsights] = useState<any>(null);
 
-  // Load all sessions and generate insights
   useEffect(() => {
     const loadSessions = () => {
       const allSessions: any[] = [];
-      
+
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key?.startsWith('mindspace-session-')) {
@@ -122,8 +120,7 @@ export const InsightsPage: React.FC = () => {
           }
         }
       }
-      
-      setSessions(allSessions);
+
       generateInsights(allSessions);
     };
 
@@ -136,10 +133,8 @@ export const InsightsPage: React.FC = () => {
       return;
     }
 
-    // Calculate total messages
-    const totalMessages = sessions.reduce((sum, s) => sum + s.messages.length, 0);
     const userMessages = sessions.reduce(
-      (sum, s) => sum + s.messages.filter((m: any) => m.role === 'user').length, 
+      (sum, s) => sum + s.messages.filter((m: any) => m.role === 'user').length,
       0
     );
 
