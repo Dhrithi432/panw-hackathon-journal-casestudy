@@ -8,7 +8,8 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 > *"Every thought is a seed. Give it a little light, a little care, and watch what grows."* 🌱
 
 ---
-- https://panw-hackathon-journal-casestudy.vercel.app/
+- Website - https://panw-hackathon-journal-casestudy.vercel.app/
+- Demo link - https://www.loom.com/share/e242d41c39e847489db86699d2ede06b
 
 ## Features
 
