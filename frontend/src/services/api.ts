@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'https://panw-hackathon-journal-casestudy-production.up.railway.app/api';
 
 export interface Message {
   role: 'user' | 'assistant';
