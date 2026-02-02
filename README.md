@@ -33,6 +33,15 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 ### AI Insights Dashboard
 ![Insights Dashboard](screenshots/dashboard.png)
 
+### Wordcloud
+![Theme Constellation](screenshots/wordcloud.png)
+
+### theme constellation
+![Theme Constellation](screenshots/theme-constellation.png)
+
+### ai-powered
+![AI Powered Analysis of Entries](screenshots/analysis.png)
+
 
 ## What It Does
 
