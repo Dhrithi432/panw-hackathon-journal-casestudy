@@ -1,38 +1,278 @@
-import React from 'react';
+// import React from 'react';
+// import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+// import { TrendingUp, Calendar, MessageSquare, TrendingDown, Minus } from 'lucide-react';
+// import { useTheme } from '@/context/ThemeContext';
+
+// export const InsightsPage: React.FC = () => {
+//   const { isDark } = useTheme();
+
+//   const stats = [
+//     { label: 'Total Entries', value: '12', icon: MessageSquare, color: '#9333ea' },
+//     { label: 'Days Active', value: '6', icon: Calendar, color: '#3b82f6' },
+//     { label: 'Avg Sentiment', value: '0.65', icon: TrendingUp, color: '#10b981' },
+//   ];
+
+//   // Mock sentiment data
+//   const sentimentData = [
+//     { date: 'Jan 10', sentiment: 0.7, label: 'Positive' },
+//     { date: 'Jan 11', sentiment: 0.5, label: 'Neutral' },
+//     { date: 'Jan 12', sentiment: 0.3, label: 'Negative' },
+//     { date: 'Jan 13', sentiment: 0.6, label: 'Positive' },
+//     { date: 'Jan 14', sentiment: 0.8, label: 'Positive' },
+//     { date: 'Jan 15', sentiment: 0.9, label: 'Very Positive' },
+//   ];
+
+//   const getSentimentIcon = (sentiment: number) => {
+//     if (sentiment >= 0.7) return <TrendingUp className="h-4 w-4" style={{ color: '#10b981' }} />;
+//     if (sentiment <= 0.4) return <TrendingDown className="h-4 w-4" style={{ color: '#ef4444' }} />;
+//     return <Minus className="h-4 w-4" style={{ color: '#6b7280' }} />;
+//   };
+
+//   return (
+//     <div>
+//       <div className="mb-6">
+//         <h2 className="text-2xl font-bold">Insights Dashboard</h2>
+//         <p className="text-sm opacity-70">Track your journaling patterns and mood</p>
+//       </div>
+
+//       {/* Stats Cards */}
+//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+//         {stats.map((stat) => {
+//           const Icon = stat.icon;
+//           return (
+//             <Card key={stat.label}>
+//               <CardContent className="pt-6">
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <p className="text-sm opacity-70">{stat.label}</p>
+//                     <p className="text-3xl font-bold mt-1">{stat.value}</p>
+//                   </div>
+//                   <div
+//                     className="p-3 rounded-lg"
+//                     style={{ backgroundColor: stat.color + '20' }}
+//                   >
+//                     <Icon style={{ color: stat.color }} className="h-6 w-6" />
+//                   </div>
+//                 </div>
+//               </CardContent>
+//             </Card>
+//           );
+//         })}
+//       </div>
+
+//       {/* Sentiment History */}
+//       <Card>
+//         <CardHeader>
+//           <CardTitle>Recent Sentiment Trend</CardTitle>
+//         </CardHeader>
+//         <CardContent>
+//           <div className="space-y-3">
+//             {sentimentData.map((item, index) => (
+//               <div 
+//                 key={index}
+//                 className="flex items-center justify-between p-3 rounded-lg"
+//                 style={{
+//                   backgroundColor: isDark ? '#374151' : '#f3f4f6'
+//                 }}
+//               >
+//                 <div className="flex items-center gap-3">
+//                   {getSentimentIcon(item.sentiment)}
+//                   <div>
+//                     <p className="font-medium">{item.date}</p>
+//                     <p className="text-sm opacity-70">{item.label}</p>
+//                   </div>
+//                 </div>
+//                 <div className="text-right">
+//                   <p className="text-2xl font-bold">{item.sentiment.toFixed(1)}</p>
+//                 </div>
+//               </div>
+//             ))}
+//           </div>
+//         </CardContent>
+//       </Card>
+//     </div>
+//   );
+// };
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { TrendingUp, Calendar, MessageSquare, TrendingDown, Minus } from 'lucide-react';
+import { Sparkles, Calendar, MessageSquare, TrendingUp, Brain, Heart } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 export const InsightsPage: React.FC = () => {
   const { isDark } = useTheme();
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [insights, setInsights] = useState<any>(null);
 
-  const stats = [
-    { label: 'Total Entries', value: '12', icon: MessageSquare, color: '#9333ea' },
-    { label: 'Days Active', value: '6', icon: Calendar, color: '#3b82f6' },
-    { label: 'Avg Sentiment', value: '0.65', icon: TrendingUp, color: '#10b981' },
-  ];
+  // Load all sessions and generate insights
+  useEffect(() => {
+    const loadSessions = () => {
+      const allSessions: any[] = [];
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('mindspace-session-')) {
+          const sessionData = localStorage.getItem(key);
+          if (sessionData) {
+            const messages = JSON.parse(sessionData, (k, value) => {
+              if (k === 'timestamp') return new Date(value);
+              return value;
+            });
+            allSessions.push({ id: key, messages });
+          }
+        }
+      }
+      
+      setSessions(allSessions);
+      generateInsights(allSessions);
+    };
 
-  // Mock sentiment data
-  const sentimentData = [
-    { date: 'Jan 10', sentiment: 0.7, label: 'Positive' },
-    { date: 'Jan 11', sentiment: 0.5, label: 'Neutral' },
-    { date: 'Jan 12', sentiment: 0.3, label: 'Negative' },
-    { date: 'Jan 13', sentiment: 0.6, label: 'Positive' },
-    { date: 'Jan 14', sentiment: 0.8, label: 'Positive' },
-    { date: 'Jan 15', sentiment: 0.9, label: 'Very Positive' },
-  ];
+    loadSessions();
+  }, []);
 
-  const getSentimentIcon = (sentiment: number) => {
-    if (sentiment >= 0.7) return <TrendingUp className="h-4 w-4" style={{ color: '#10b981' }} />;
-    if (sentiment <= 0.4) return <TrendingDown className="h-4 w-4" style={{ color: '#ef4444' }} />;
-    return <Minus className="h-4 w-4" style={{ color: '#6b7280' }} />;
+  const generateInsights = (sessions: any[]) => {
+    if (sessions.length === 0) {
+      setInsights(null);
+      return;
+    }
+
+    // Calculate total messages
+    const totalMessages = sessions.reduce((sum, s) => sum + s.messages.length, 0);
+    const userMessages = sessions.reduce(
+      (sum, s) => sum + s.messages.filter((m: any) => m.role === 'user').length, 
+      0
+    );
+
+    // Calculate days active (unique dates)
+    const dates = new Set(
+      sessions.flatMap(s => 
+        s.messages.map((m: any) => m.timestamp.toDateString())
+      )
+    );
+
+    // Get most active day
+    const dayCount: any = {};
+    sessions.forEach(s => {
+      s.messages.forEach((m: any) => {
+        const day = m.timestamp.toLocaleDateString('en-US', { weekday: 'long' });
+        dayCount[day] = (dayCount[day] || 0) + 1;
+      });
+    });
+    const mostActiveDay = Object.entries(dayCount).sort((a: any, b: any) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+    // Average messages per session
+    const avgMessages = Math.round(userMessages / sessions.length);
+
+    // Longest conversation
+    const longestSession = Math.max(...sessions.map(s => s.messages.length));
+
+    // Recent activity (last 7 days)
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const recentSessions = sessions.filter(s => 
+      s.messages.some((m: any) => m.timestamp >= weekAgo)
+    );
+
+    setInsights({
+      totalEntries: sessions.length,
+      totalMessages: userMessages,
+      daysActive: dates.size,
+      avgMessages,
+      longestSession,
+      mostActiveDay,
+      recentActivity: recentSessions.length,
+      streak: dates.size >= 3 ? '🔥 On a roll!' : dates.size >= 7 ? '💜 Amazing streak!' : null,
+    });
   };
+
+  const stats = insights ? [
+    { 
+      label: 'Total Reflections', 
+      value: `${insights.totalEntries} ${insights.totalEntries > 5 ? '🌟' : ''}`, 
+      icon: MessageSquare, 
+      color: '#9333ea',
+      subtitle: `${insights.totalMessages} thoughts shared`
+    },
+    { 
+      label: 'Active Days', 
+      value: `${insights.daysActive} ${insights.daysActive > 3 ? '💜' : ''}`, 
+      icon: Calendar, 
+      color: '#8b5cf6',
+      subtitle: `Most active: ${insights.mostActiveDay}`
+    },
+    { 
+      label: 'Deepest Conversation', 
+      value: `${insights.longestSession} exchanges`, 
+      icon: Brain, 
+      color: '#a78bfa',
+      subtitle: 'Your most engaged session'
+    },
+  ] : [];
+
+  const aiInsights = insights ? [
+    {
+      icon: '💭',
+      title: 'Reflection Pattern',
+      insight: insights.avgMessages > 5 
+        ? 'You dive deep into your thoughts, averaging over 5 messages per session. Your willingness to explore is wonderful!'
+        : 'You tend to share concise, focused thoughts. Sometimes brevity brings clarity!',
+    },
+    {
+      icon: '📈',
+      title: 'Recent Activity',
+      insight: insights.recentActivity > 0
+        ? `You've journaled ${insights.recentActivity} ${insights.recentActivity === 1 ? 'time' : 'times'} this week. Your consistency is building momentum!`
+        : 'It\'s been a while since your last entry. Your thoughts are always welcome here.',
+    },
+    {
+      icon: '✨',
+      title: 'Growth Insight',
+      insight: insights.totalEntries < 5
+        ? 'You\'re just getting started! Each conversation helps build self-awareness.'
+        : insights.totalEntries < 15
+        ? 'You\'re building a meaningful practice. Your commitment to reflection shows real growth.'
+        : 'You\'ve created a rich tapestry of self-reflection. Your dedication to inner work is inspiring!',
+    },
+    {
+      icon: '🎯',
+      title: 'Next Milestone',
+      insight: insights.totalEntries < 10
+        ? `${10 - insights.totalEntries} more reflections to reach 10 entries!`
+        : insights.totalEntries < 25
+        ? `${25 - insights.totalEntries} more reflections to reach 25 entries!`
+        : 'You\'ve journaled extensively! Keep nurturing this valuable habit.',
+    },
+  ] : [];
+
+  if (!insights) {
+    return (
+      <div>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold">Insights Dashboard 💜</h2>
+          <p className="text-sm opacity-70">Track your journaling journey</p>
+        </div>
+
+        <Card>
+          <CardContent className="text-center py-12">
+            <Sparkles className="h-12 w-12 mx-auto mb-4" style={{ color: '#9333ea' }} />
+            <p className="text-lg opacity-70 mb-2">No insights yet</p>
+            <p className="text-sm opacity-50">Start journaling to see your patterns emerge!</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold">Insights Dashboard</h2>
-        <p className="text-sm opacity-70">Track your journaling patterns and mood</p>
+        <h2 className="text-2xl font-bold">Insights Dashboard 💜</h2>
+        <p className="text-sm opacity-70">Your journaling journey at a glance</p>
+        {insights.streak && (
+          <p className="text-sm mt-2" style={{ color: '#9333ea' }}>
+            {insights.streak}
+          </p>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -42,7 +282,7 @@ export const InsightsPage: React.FC = () => {
           return (
             <Card key={stat.label}>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-sm opacity-70">{stat.label}</p>
                     <p className="text-3xl font-bold mt-1">{stat.value}</p>
@@ -54,40 +294,54 @@ export const InsightsPage: React.FC = () => {
                     <Icon style={{ color: stat.color }} className="h-6 w-6" />
                   </div>
                 </div>
+                <p className="text-xs opacity-60">{stat.subtitle}</p>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Sentiment History */}
+      {/* AI-Generated Insights */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Sentiment Trend</CardTitle>
+          <div className="flex items-center gap-2">
+            <Sparkles style={{ color: '#9333ea' }} className="h-5 w-5" />
+            <CardTitle>AI Insights</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {sentimentData.map((item, index) => (
+          <div className="space-y-4">
+            {aiInsights.map((item, index) => (
               <div 
                 key={index}
-                className="flex items-center justify-between p-3 rounded-lg"
+                className="p-4 rounded-lg border-l-4"
                 style={{
-                  backgroundColor: isDark ? '#374151' : '#f3f4f6'
+                  backgroundColor: isDark ? '#1f2937' : '#faf5ff',
+                  borderLeftColor: '#9333ea',
                 }}
               >
-                <div className="flex items-center gap-3">
-                  {getSentimentIcon(item.sentiment)}
-                  <div>
-                    <p className="font-medium">{item.date}</p>
-                    <p className="text-sm opacity-70">{item.label}</p>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{item.icon}</span>
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1" style={{ color: '#9333ea' }}>
+                      {item.title}
+                    </p>
+                    <p className="text-sm opacity-80">{item.insight}</p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">{item.sentiment.toFixed(1)}</p>
                 </div>
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Encouragement */}
+      <Card className="mt-6">
+        <CardContent className="pt-6 text-center">
+          <Heart style={{ color: '#9333ea' }} className="h-8 w-8 mx-auto mb-3" />
+          <p className="text-sm opacity-70">
+            Every reflection is a step toward greater self-understanding. Keep going! ✨
+          </p>
         </CardContent>
       </Card>
     </div>
