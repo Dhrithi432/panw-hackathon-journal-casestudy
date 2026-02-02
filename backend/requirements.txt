@@ -5,3 +5,4 @@ anthropic==0.40.0
 httpx==0.28.1
 pydantic==2.10.6
 pydantic-settings==2.7.1
+lucide-react==0.563.0
