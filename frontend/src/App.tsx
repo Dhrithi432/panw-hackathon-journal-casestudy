@@ -51,7 +51,7 @@ function App() {
       >
         {/* Logo/Brand */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">MindSpace</h1>
+          <h1 className="text-2xl font-bold">safespace💜🤗</h1>
           <p className="text-sm opacity-70 mt-1">Welcome, {user?.username}</p>
         </div>
 
