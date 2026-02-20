@@ -60,7 +60,7 @@ The app is built to be **simple, fast, and easy to understand**. The frontend fo
 **Design choices**
 
 - **Conversations that flow** — Journal entries are chat threads with the AI, so writing feels like talking to someone who listens and reflects back.
-- **Local-first for now** — User identity and journal sessions live in the browser (e.g. localStorage) so you can run and demo the app without a database. The backend is used for the AI only.
+- **Hybrid storage** — Journal sessions use the backend database (SQLite by default, PostgreSQL in production) when available, with localStorage fallback for compatibility. User identity is still client-side for now.
 - **Single AI persona** — One companion (Mira) with a fixed, supportive personality keeps the experience consistent and safe (e.g. no medical advice, gentle signposting if someone is in distress).
 - **Insights from your data** — The Insights page derives stats from your stored sessions and sends a summary to the AI for deeper analysis. Claude returns a central theme and related words (powering the **Word Cloud**) and core themes with connections (the **Theme Constellation**), plus narrative, hidden pattern, and a reflection question—so the app feels responsive to your own history.
 
@@ -110,7 +110,7 @@ Tests cover:
 
 ## Future Enhancements
 
-- **Persistence** — Move journal entries and user accounts to a real database and optional cloud sync.
+- **Persistence** — Journal sessions now use SQLite/PostgreSQL. Next: move user accounts to proper auth (e.g. Supabase) and add cloud sync.
 - **Auth** — Replace demo login with proper sign-up/sign-in (e.g. email magic link or OAuth).
 - **Richer insights** — Sentiment over time, simple mood tags, or weekly summaries, still with a privacy-first approach.
 - **Export** — Download your entries (e.g. PDF or Markdown) for backup or printing.

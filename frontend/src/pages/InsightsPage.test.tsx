@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { InsightsPage } from '@/pages/InsightsPage'
+import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import * as api from '@/services/api'
 
@@ -13,7 +14,9 @@ vi.mock('@/services/api', () => ({
 const renderInsightsPage = () =>
   render(
     <ThemeProvider>
-      <InsightsPage />
+      <AuthProvider>
+        <InsightsPage />
+      </AuthProvider>
     </ThemeProvider>
   )
 

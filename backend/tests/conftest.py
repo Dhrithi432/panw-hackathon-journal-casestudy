@@ -4,6 +4,13 @@ from unittest.mock import patch, MagicMock
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.db import init_db
+
+
+@pytest.fixture(autouse=True)
+async def ensure_db():
+    """Ensure database tables exist before each test."""
+    await init_db()
 
 
 @pytest.fixture

@@ -68,6 +68,22 @@ export interface UnifiedInsights {
   future_prompt: string;
 }
 
+// Sessions (PostgreSQL) interfaces
+export interface SessionMessage {
+  id: string;
+  role: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface SessionData {
+  id: string;
+  title: string;
+  messages: SessionMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
 // API Service
 export const apiService = {
   async summarize(messages: Message[]): Promise<string> {
@@ -142,5 +158,47 @@ export const apiService = {
     }
 
     return await response.json();
+  },
+
+  // Sessions API (PostgreSQL)
+  async listSessions(userId: string): Promise<SessionData[]> {
+    const res = await fetch(`${API_BASE_URL}/sessions?user_id=${encodeURIComponent(userId)}`);
+    if (!res.ok) throw new Error('Failed to list sessions');
+    return res.json();
+  },
+  async createSession(userId: string, title = 'New Entry'): Promise<SessionData> {
+    const res = await fetch(`${API_BASE_URL}/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, title }),
+    });
+    if (!res.ok) throw new Error('Failed to create session');
+    return res.json();
+  },
+  async getSession(sessionId: string, userId: string): Promise<SessionData> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}?user_id=${encodeURIComponent(userId)}`);
+    if (!res.ok) throw new Error('Failed to get session');
+    return res.json();
+  },
+  async saveMessages(sessionId: string, userId: string, messages: { id: string; role: string; content: string; timestamp: Date | string }[]): Promise<SessionData> {
+    const payload = messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+    }));
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages?user_id=${encodeURIComponent(userId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: payload }),
+    });
+    if (!res.ok) throw new Error('Failed to save messages');
+    return res.json();
+  },
+  async deleteSession(sessionId: string, userId: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${sessionId}?user_id=${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete session');
   },
 };

@@ -347,11 +347,15 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Sparkles, Calendar, MessageSquare, Brain, Heart, Loader2, Lightbulb, MessageCircle } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import { apiService, type UnifiedInsights } from '@/services/api';
+import { storageService } from '@/services/storage';
 import { WordCloud } from '@/components/WordCloud.tsx';
 
 export const InsightsPage: React.FC = () => {
   const { isDark } = useTheme();
+  const { user } = useAuth();
+  const uid = user?.id || 'anonymous';
   const [sessions, setSessions] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [insights, setInsights] = useState<UnifiedInsights | null>(null);
@@ -359,27 +363,14 @@ export const InsightsPage: React.FC = () => {
 
   useEffect(() => {
     loadDataAndGenerateInsights();
-  }, []);
+  }, [uid]);
 
   const loadDataAndGenerateInsights = async () => {
     setLoading(true);
-    
-    const allSessions: any[] = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('mindspace-session-')) {
-        const sessionData = localStorage.getItem(key);
-        if (sessionData) {
-          const messages = JSON.parse(sessionData, (k, value) => {
-            if (k === 'timestamp') return new Date(value);
-            return value;
-          });
-          allSessions.push({ id: key, messages });
-        }
-      }
-    }
-    
+
+    const list = await storageService.getSessions(uid);
+    const allSessions = list.map((s) => ({ id: s.id, messages: s.messages }));
+
     setSessions(allSessions);
 
     if (allSessions.length === 0) {

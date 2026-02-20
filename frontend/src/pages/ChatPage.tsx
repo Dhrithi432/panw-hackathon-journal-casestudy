@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { ChatMessage } from '@/types';
 import { generateId } from '@/lib/utils';
 import { apiService } from '@/services/api';
+import { storageService } from '@/services/storage';
 
 export const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -30,92 +31,66 @@ export const ChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  const saveMessages = async (msgs: ChatMessage[], sessionId: string) => {
+    const uid = user?.id || 'anonymous';
+    await storageService.saveMessages(sessionId, uid, msgs);
+  };
+
   // Load current session or create new one
   useEffect(() => {
     const loadSession = async () => {
-      // Get current session ID from localStorage
-      const savedSessionId = localStorage.getItem('mindspace-current-session');
-      
+      const uid = user?.id || 'anonymous';
+      const savedSessionId = storageService.getCurrentSessionId();
+
       if (savedSessionId) {
-        // Load existing session
-        const savedMessages = localStorage.getItem(`mindspace-session-${savedSessionId}`);
-        if (savedMessages) {
-          const parsedMessages = JSON.parse(savedMessages, (key, value) => {
-            if (key === 'timestamp') return new Date(value);
-            return value;
-          });
-          setMessages(parsedMessages);
+        const loaded = await storageService.getSession(savedSessionId, uid);
+        if (loaded && loaded.length > 0) {
+          setMessages(loaded);
           setCurrentSessionId(savedSessionId);
           setLoadingPrompt(false);
           return;
         }
       }
 
-      // Create new session
-      const newSessionId = generateId();
+      const newSessionId = await storageService.createSession(uid);
       setCurrentSessionId(newSessionId);
-      localStorage.setItem('mindspace-current-session', newSessionId);
+      storageService.setCurrentSessionId(newSessionId);
 
-      // Load opening prompt
       try {
         const prompt = await apiService.getOpeningPrompt();
-        const aiMessage: ChatMessage = {
-          id: generateId(),
-          role: 'assistant',
-          content: prompt,
-          timestamp: new Date(),
-        };
+        const aiMessage: ChatMessage = { id: generateId(), role: 'assistant', content: prompt, timestamp: new Date() };
         setMessages([aiMessage]);
-        saveMessages([aiMessage], newSessionId);
-      } catch (error) {
-        console.error('Failed to load opening prompt:', error);
-        const aiMessage: ChatMessage = {
-          id: generateId(),
-          role: 'assistant',
-          content: "Hi! I'm here to listen. What's on your mind?",
-          timestamp: new Date(),
-        };
+        await saveMessages([aiMessage], newSessionId);
+      } catch {
+        const aiMessage: ChatMessage = { id: generateId(), role: 'assistant', content: "Hi! I'm here to listen. What's on your mind?", timestamp: new Date() };
         setMessages([aiMessage]);
-        saveMessages([aiMessage], newSessionId);
+        await saveMessages([aiMessage], newSessionId);
       } finally {
         setLoadingPrompt(false);
       }
     };
 
     loadSession();
-  }, []);
+  }, [user?.id]);
 
-  // Save messages to localStorage
-  const saveMessages = (msgs: ChatMessage[], sessionId: string) => {
-    localStorage.setItem(`mindspace-session-${sessionId}`, JSON.stringify(msgs));
-  };
-
-  // Start new conversation
   const startNewConversation = async () => {
-    const newSessionId = generateId();
-    setCurrentSessionId(newSessionId);
-    localStorage.setItem('mindspace-current-session', newSessionId);
-    
+    const uid = user?.id || 'anonymous';
     setLoadingPrompt(true);
     try {
+      const newSessionId = await storageService.createSession(uid);
+      setCurrentSessionId(newSessionId);
+      storageService.setCurrentSessionId(newSessionId);
       const prompt = await apiService.getOpeningPrompt();
-      const aiMessage: ChatMessage = {
-        id: generateId(),
-        role: 'assistant',
-        content: prompt,
-        timestamp: new Date(),
-      };
+      const aiMessage: ChatMessage = { id: generateId(), role: 'assistant', content: prompt, timestamp: new Date() };
       setMessages([aiMessage]);
-      saveMessages([aiMessage], newSessionId);
-    } catch (error) {
-      const aiMessage: ChatMessage = {
-        id: generateId(),
-        role: 'assistant',
-        content: "Hi! I'm here to listen. What's on your mind?",
-        timestamp: new Date(),
-      };
+      await saveMessages([aiMessage], newSessionId);
+    } catch {
+      const fallbackId = generateId();
+      setCurrentSessionId(fallbackId);
+      storageService.setCurrentSessionId(fallbackId);
+      const aiMessage: ChatMessage = { id: generateId(), role: 'assistant', content: "Hi! I'm here to listen. What's on your mind?", timestamp: new Date() };
       setMessages([aiMessage]);
-      saveMessages([aiMessage], newSessionId);
+      storageService.saveMessagesToStorage(fallbackId, [aiMessage]);
     } finally {
       setLoadingPrompt(false);
     }
@@ -133,7 +108,7 @@ export const ChatPage: React.FC = () => {
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    saveMessages(updatedMessages, currentSessionId);
+    await saveMessages(updatedMessages, currentSessionId);
     setInputText('');
     setIsLoading(true);
 
@@ -154,7 +129,7 @@ export const ChatPage: React.FC = () => {
 
       const finalMessages = [...updatedMessages, aiMessage];
       setMessages(finalMessages);
-      saveMessages(finalMessages, currentSessionId);
+      await saveMessages(finalMessages, currentSessionId);
     } catch (error) {
       console.error('Failed to send message:', error);
       
@@ -167,7 +142,7 @@ export const ChatPage: React.FC = () => {
       
       const finalMessages = [...updatedMessages, errorMessage];
       setMessages(finalMessages);
-      saveMessages(finalMessages, currentSessionId);
+      await saveMessages(finalMessages, currentSessionId);
     } finally {
       setIsLoading(false);
     }

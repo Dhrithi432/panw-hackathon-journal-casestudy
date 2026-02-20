@@ -3,59 +3,30 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Calendar, MessageSquare, Trash2 } from 'lucide-react';
 import type { JournalSession } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { storageService } from '@/services/storage';
 
 export const EntriesPage: React.FC = () => {
   const [sessions, setSessions] = useState<JournalSession[]>([]);
+  const { user } = useAuth();
+  const uid = user?.id || 'anonymous';
 
-  // Load all sessions from localStorage
   useEffect(() => {
-    const loadSessions = () => {
-      const allSessions: JournalSession[] = [];
-      
-      // Iterate through localStorage to find all sessions
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('mindspace-session-')) {
-          const sessionData = localStorage.getItem(key);
-          if (sessionData) {
-            const messages = JSON.parse(sessionData, (k, value) => {
-              if (k === 'timestamp') return new Date(value);
-              return value;
-            });
-            
-            const sessionId = key.replace('mindspace-session-', '');
-            const firstUserMessage = messages.find((m: any) => m.role === 'user');
-            const title = firstUserMessage 
-              ? firstUserMessage.content.slice(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '')
-              : 'New Entry';
-            
-            allSessions.push({
-              id: sessionId,
-              title,
-              messages,
-              createdAt: messages[0]?.timestamp || new Date(),
-              updatedAt: messages[messages.length - 1]?.timestamp || new Date(),
-            });
-          }
-        }
-      }
-      
-      // Sort by most recent first
-      allSessions.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-      setSessions(allSessions);
+    const load = async () => {
+      const list = await storageService.getSessions(uid);
+      setSessions(list);
     };
+    load();
+  }, [uid]);
 
-    loadSessions();
-  }, []);
-
-  const deleteSession = (sessionId: string) => {
-    localStorage.removeItem(`mindspace-session-${sessionId}`);
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
+  const deleteSession = async (sessionId: string) => {
+    await storageService.deleteSession(sessionId, uid);
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
   };
 
   const viewSession = (sessionId: string) => {
-    localStorage.setItem('mindspace-current-session', sessionId);
-    window.location.reload(); // Simple way to load the session
+    storageService.setCurrentSessionId(sessionId);
+    window.location.reload();
   };
 
   return (
