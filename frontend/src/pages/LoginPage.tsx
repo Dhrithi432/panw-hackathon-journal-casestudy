@@ -58,7 +58,7 @@ export const LoginPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <CardContent className="space-y-4">
               <Input
                 label="Username"
