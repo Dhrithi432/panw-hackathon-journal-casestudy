@@ -8,17 +8,20 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 > *"Every thought is a seed. Give it a little light, a little care, and watch what grows."* 🌱
 
 ---
-- Website - https://panw-hackathon-journal-casestudy.vercel.app/
-- Demo link - https://www.loom.com/share/e242d41c39e847489db86699d2ede06b
+
+- **Website** — https://panw-hackathon-journal-casestudy.vercel.app/
+- **Demo** — https://www.loom.com/share/e242d41c39e847489db86699d2ede06b
 
 ## Features
 
-- 🤖 **AI Chat Companion** - Journal through natural conversation with Claude
-- 💭 **Smart Insights** - AI analyzes your entries to find patterns and themes
-- 🌸 **Word Cloud Visualization** - See your dominant themes at a glance
-- 🌟 **Theme Constellation** - Discover connections between different aspects of your life
-- 🌓 **Dark Mode** - Easy on the eyes, day or night
-- 💾 **Persistent Storage** - Your entries are saved locally
+- 🤖 **AI Chat Companion** — Journal through natural conversation with **Mira** (Claude Sonnet)
+- 💭 **Smart Insights** — AI analyzes your entries to find patterns, themes, and hidden connections
+- 🌸 **Word Cloud** — See your central theme with related words orbiting around it
+- 🌟 **Theme Constellation** — Discover core themes with sentiment, frequency, and connections
+- 🌓 **Dark Mode** — Toggle between light and dark themes
+- 💾 **Hybrid Storage** — Supabase (optional) → PostgreSQL via API → localStorage fallback
+- 🔐 **Auth Options** — Demo login (username/email) or Supabase sign-in/sign-up when configured
+- 📥 **Migration** — Automatically migrates localStorage entries to backend or Supabase on first use
 
 ## 📸 Screenshots
 
@@ -55,14 +58,15 @@ It helps you capture thoughts, revisit past entries, and see gentle insights abo
 
 ## Design Overview
 
-The app is built to be **simple, fast, and easy to understand**. The frontend focuses on a small set of screens and clear actions; the backend exposes a minimal API; and the AI layer is isolated so you can switch between a real model and a mock without changing the rest of the app.
+The app is built to be **simple, fast, and easy to understand**. The frontend focuses on a small set of screens and clear actions; the backend exposes a thin API with optional database persistence; and the AI layer is isolated so you can switch between Claude and a mock without changing the rest of the app.
 
 **Design choices**
 
-- **Conversations that flow** — Journal entries are chat threads with the AI, so writing feels like talking to someone who listens and reflects back.
-- **Hybrid storage** — Journal sessions use the backend database (SQLite by default, PostgreSQL in production) when available, with localStorage fallback for compatibility. User identity is still client-side for now.
-- **Single AI persona** — One companion (Mira) with a fixed, supportive personality keeps the experience consistent and safe (e.g. no medical advice, gentle signposting if someone is in distress).
-- **Insights from your data** — The Insights page derives stats from your stored sessions and sends a summary to the AI for deeper analysis. Claude returns a central theme and related words (powering the **Word Cloud**) and core themes with connections (the **Theme Constellation**), plus narrative, hidden pattern, and a reflection question—so the app feels responsive to your own history.
+- **Conversations that flow** — Journal entries are chat threads with **Mira**, so writing feels like talking to someone who listens and reflects back.
+- **Storage chain** — Journal sessions use: (1) **Supabase** when configured, (2) **PostgreSQL** via the backend sessions API (SQLite in dev), or (3) **localStorage** as fallback. Auth is demo (client-side) or Supabase when configured.
+- **Single AI persona** — One companion (Mira) with a fixed, supportive personality keeps the experience consistent and safe (no medical advice, gentle signposting if someone is in distress).
+- **Context-aware chat** — Older messages are summarized via `/api/summarize` so the AI keeps context without exceeding token limits; recent messages (up to 30) are sent as-is.
+- **Unified insights** — The Insights page sends a summary of entries to Claude and receives in one call: **Word Cloud** (central theme + related words), **Theme Constellation** (core themes + connections), plus narrative, hidden pattern, and reflection question.
 
 ---
 
@@ -70,19 +74,28 @@ The app is built to be **simple, fast, and easy to understand**. The frontend fo
 
 | Layer   | Choices |
 |--------|---------|
-| **Frontend** | React 19, TypeScript, Vite. Styling with Tailwind CSS; UI built from modular components (e.g. Card, Button, Input). React context for auth and theme. React Router for navigation. |
-| **Backend**  | FastAPI with CORS enabled. Thin API that receives chat history and forwards it to the AI layer. Pydantic for request/response models. |
-| **AI**       | Anthropic Claude (e.g. Claude Sonnet) via the official SDK, with a dedicated system prompt for Mira. Optional **mock AI** returns predefined empathetic replies so the app can run without an API key. |
+| **Frontend** | React 19, TypeScript, Vite 7. Tailwind CSS 4, Radix Slot, Lucide icons. Supabase client (optional). React context for auth and theme. React Router for navigation. |
+| **Backend**  | FastAPI with CORS, rate limiting (slowapi), body limit middleware. SQLAlchemy 2.0 async (SQLite dev, PostgreSQL prod). Pydantic for request/response models. |
+| **AI**       | Anthropic Claude Sonnet via the official SDK, with a dedicated system prompt for Mira. Optional **mock AI** returns predefined empathetic replies when `USE_MOCK_AI=True`. |
 
 ---
 
 ## API Endpoints
 
-- **POST `/api/chat`** — Sends the current conversation (messages + user id) to the AI and returns Mira’s reply and a timestamp.
-- **GET `/api/opening-prompt`** — Returns the initial greeting message shown when you start a new journal entry.
-- **POST `/api/insights/unified`** — Sends a summary of your entries (dates, message counts, sample user messages) to the AI and returns unified insights: central theme, related words for the **Word Cloud**, core themes and connections for the **Theme Constellation**, plus narrative, hidden pattern, and reflection question.
-
-The backend also exposes a root message and a **GET `/health`** endpoint for liveness checks.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Root message |
+| GET | `/health` | Health check |
+| GET | `/api/opening-prompt` | Initial greeting when starting a new entry |
+| POST | `/api/chat` | Chat completion; returns Mira's reply and timestamp |
+| POST | `/api/summarize` | Summarizes older messages for context compression |
+| POST | `/api/insights/unified` | Word cloud + constellation + narrative + hidden pattern + reflection question |
+| GET | `/api/sessions?user_id=` | List sessions for a user |
+| POST | `/api/sessions` | Create a new session |
+| GET | `/api/sessions/{id}?user_id=` | Get session and messages |
+| PUT | `/api/sessions/{id}/messages?user_id=` | Replace messages in a session |
+| DELETE | `/api/sessions/{id}?user_id=` | Delete a session |
+| POST | `/api/migrate` | Import sessions from frontend (e.g. localStorage) into the database |
 
 ---
 
@@ -103,18 +116,47 @@ npm run test:run
 ```
 
 Tests cover:
-- **Backend**: API endpoints (chat, opening prompt, insights), Pydantic models, mock AI service, config, and Anthropic service behavior
-- **Frontend**: Utils, API service, Auth/Theme contexts, Login/Chat/Entries/Insights pages, UI components (Button, Input, Card, WordCloud, ThemeToggle)
+- **Backend**: API endpoints (chat, opening prompt, insights, sessions), Pydantic models, mock AI service, config, and Anthropic service behavior
+- **Frontend**: Utils, API service, storage, migration, Auth/Theme contexts, Login/Chat/Entries/Insights pages, UI components (Button, Input, Card, WordCloud, ThemeToggle)
+
+---
+
+## Configuration
+
+### Backend (`.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | `mock-key` | Anthropic API key for live AI; use mock when not set |
+| `USE_MOCK_AI` | `True` | Use mock AI instead of Anthropic |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./mindspace.db` | SQLAlchemy URL (PostgreSQL for production) |
+| `PORT` | `8000` | Server port |
+
+### Frontend
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_BASE_URL` | Backend API base URL |
+| `VITE_SUPABASE_URL` | Optional Supabase URL for auth/storage |
+| `VITE_SUPABASE_ANON_KEY` | Optional Supabase anon key |
+
+---
+
+## Security
+
+- **API key** — `ANTHROPIC_API_KEY` stays in the backend; never exposed to the frontend.
+- **Rate limiting** — Per-IP rate limits (e.g. 60/min) via slowapi.
+- **Body limit** — Request body size capped (e.g. 1MB) to prevent abuse.
+- **CORS** — Configured for frontend origins; credentials allowed.
 
 ---
 
 ## Future Enhancements
 
-- **Persistence** — Journal sessions now use SQLite/PostgreSQL. Next: move user accounts to proper auth (e.g. Supabase) and add cloud sync.
-- **Auth** — Replace demo login with proper sign-up/sign-in (e.g. email magic link or OAuth).
-- **Richer insights** — Sentiment over time, simple mood tags, or weekly summaries, still with a privacy-first approach.
-- **Export** — Download your entries (e.g. PDF or Markdown) for backup or printing.
-- **Safety** — Stronger content guidelines, rate limits, and audit logging for production use.
+- **Auth** — Supabase auth is optional; expand to email magic link or OAuth for production.
+- **Richer insights** — Sentiment over time, mood tags, weekly summaries.
+- **Export** — Download entries as PDF or Markdown for backup.
+- **Safety** — Stronger content guidelines, audit logging for production.
 
 ---
 
