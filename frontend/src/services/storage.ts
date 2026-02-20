@@ -1,14 +1,18 @@
 /**
- * Storage abstraction: tries API (PostgreSQL) first, falls back to localStorage.
- * Allows gradual migration and works when sessions API is not yet deployed.
+ * Storage abstraction: Supabase (when configured) > API (PostgreSQL) > localStorage.
  */
 import type { ChatMessage } from '@/types';
 import type { JournalSession } from '@/types';
 import { apiService } from './api';
 import { generateId } from '@/lib/utils';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { supabaseStorage } from './supabase-storage';
 
 export const storageService = {
   async getSessions(userId: string): Promise<JournalSession[]> {
+    if (isSupabaseConfigured()) {
+      return supabaseStorage.getSessions(userId);
+    }
     try {
       const data = await apiService.listSessions(userId);
       return data.map((s) => ({
@@ -54,6 +58,9 @@ export const storageService = {
   },
 
   async createSession(userId: string, title = 'New Entry'): Promise<string> {
+    if (isSupabaseConfigured()) {
+      return supabaseStorage.createSession(userId, title);
+    }
     try {
       const s = await apiService.createSession(userId, title);
       return s.id;
@@ -65,6 +72,9 @@ export const storageService = {
   },
 
   async getSession(sessionId: string, userId: string): Promise<ChatMessage[] | null> {
+    if (isSupabaseConfigured()) {
+      return supabaseStorage.getSession(sessionId, userId);
+    }
     try {
       const s = await apiService.getSession(sessionId, userId);
       return s.messages.map((m) => ({
@@ -80,6 +90,10 @@ export const storageService = {
   },
 
   async saveMessages(sessionId: string, userId: string, messages: ChatMessage[]): Promise<void> {
+    if (isSupabaseConfigured()) {
+      await supabaseStorage.saveMessages(sessionId, userId, messages);
+      return;
+    }
     try {
       await apiService.saveMessages(sessionId, userId, messages);
     } catch {
@@ -92,6 +106,10 @@ export const storageService = {
   },
 
   async deleteSession(sessionId: string, userId: string): Promise<void> {
+    if (isSupabaseConfigured()) {
+      await supabaseStorage.deleteSession(sessionId, userId);
+      return;
+    }
     try {
       await apiService.deleteSession(sessionId, userId);
     } catch {

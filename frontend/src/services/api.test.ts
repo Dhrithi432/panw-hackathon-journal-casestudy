@@ -54,7 +54,7 @@ describe('apiService', () => {
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockResponse) } as Response)
 
       const manyMessages = Array.from({ length: 50 }, (_, i) => ({
-        role: (i % 2 === 0 ? 'user' : 'assistant') as const,
+        role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
         content: `msg${i}`,
       }))
 
@@ -74,7 +74,7 @@ describe('apiService', () => {
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ message: 'OK', timestamp: new Date().toISOString() }) } as Response)
 
       const manyMessages = Array.from({ length: 40 }, (_, i) => ({
-        role: (i % 2 === 0 ? 'user' : 'assistant') as const,
+        role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
         content: `msg${i}`,
       }))
 

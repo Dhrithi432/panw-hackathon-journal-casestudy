@@ -1,10 +1,11 @@
 /**
- * Data migration: localStorage → database.
- * Uses batching, retries, and conflict handling.
+ * Data migration: localStorage → database (Supabase or sessions API).
  */
 import type { JournalSession } from '@/types';
 import { storageService } from './storage';
 import { apiService } from './api';
+import { supabaseStorage } from './supabase-storage';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 const BATCH_SIZE = 5;
 const MAX_RETRIES = 3;
@@ -21,7 +22,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function migrateBatchWithRetry(
+async function migrateBatchToApi(
   userId: string,
   batch: JournalSession[],
   attempt = 0
@@ -41,10 +42,25 @@ async function migrateBatchWithRetry(
   } catch (err) {
     if (attempt < MAX_RETRIES - 1) {
       await delay(RETRY_DELAY_MS * Math.pow(2, attempt));
-      return migrateBatchWithRetry(userId, batch, attempt + 1);
+      return migrateBatchToApi(userId, batch, attempt + 1);
     }
     throw err;
   }
+}
+
+async function migrateToSupabase(userId: string, sessions: JournalSession[]): Promise<{ imported: number; skipped: number }> {
+  let imported = 0;
+  let skipped = 0;
+  for (const s of sessions) {
+    try {
+      await supabaseStorage.createSession(userId, s.title, s.id);
+      await supabaseStorage.saveMessages(s.id, userId, s.messages);
+      imported += 1;
+    } catch {
+      skipped += 1;
+    }
+  }
+  return { imported, skipped };
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -79,15 +95,21 @@ export async function runMigration(userId: string): Promise<MigrationResult> {
   const sessions = storageService.getSessionsFromStorage();
   if (sessions.length === 0) return { imported: 0, skipped: 0, done: true };
 
-  const batches = chunk(sessions, BATCH_SIZE);
   let totalImported = 0;
   let totalSkipped = 0;
 
   try {
-    for (const batch of batches) {
-      const { imported, skipped } = await migrateBatchWithRetry(userId, batch);
-      totalImported += imported;
-      totalSkipped += skipped;
+    if (isSupabaseConfigured()) {
+      const result = await migrateToSupabase(userId, sessions);
+      totalImported = result.imported;
+      totalSkipped = result.skipped;
+    } else {
+      const batches = chunk(sessions, BATCH_SIZE);
+      for (const batch of batches) {
+        const { imported, skipped } = await migrateBatchToApi(userId, batch);
+        totalImported += imported;
+        totalSkipped += skipped;
+      }
     }
 
     localStorage.setItem('mindspace-migrated', 'true');

@@ -72,14 +72,14 @@ describe('migration', () => {
         {
           id: 's1',
           title: 'One',
-          messages: [{ id: 'm1', role: 'user', content: 'Hi', timestamp: new Date() }],
+          messages: [{ id: 'm1', role: 'user' as const, content: 'Hi', timestamp: new Date() }],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
         {
           id: 's2',
           title: 'Two',
-          messages: [{ id: 'm2', role: 'user', content: 'Hello', timestamp: new Date() }],
+          messages: [{ id: 'm2', role: 'user' as const, content: 'Hello', timestamp: new Date() }],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -104,7 +104,7 @@ describe('migration', () => {
         {
           id: 's1',
           title: 'One',
-          messages: [{ id: 'm1', role: 'user', content: 'Hi', timestamp: new Date() }],
+          messages: [{ id: 'm1', role: 'user' as const, content: 'Hi', timestamp: new Date() }],
           createdAt: new Date(),
           updatedAt: new Date(),
         },

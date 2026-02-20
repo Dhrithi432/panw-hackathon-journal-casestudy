@@ -13,7 +13,7 @@ import { runMigration, hasLocalSessionsToMigrate, isMigrationComplete } from './
 type Page = 'chat' | 'entries' | 'insights';
 
 function App() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, loading } = useAuth();
   const { isDark } = useTheme();
   const [currentPage, setCurrentPage] = useState<Page>('chat');
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
@@ -32,6 +32,13 @@ function App() {
       .catch(() => setMigrationStatus('error'));
   }, [isAuthenticated, user?.id, migrationStatus]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg opacity-70">Loading…</p>
+      </div>
+    );
+  }
   if (!isAuthenticated) {
     return <LoginPage />;
   }
