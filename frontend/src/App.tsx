@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { ChatPage } from './pages/ChatPage';
@@ -8,6 +8,7 @@ import { useTheme } from './context/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Button } from './components/ui/button';
 import { MessageSquare, BookOpen, BarChart3, LogOut } from 'lucide-react';
+import { runMigration, hasLocalSessionsToMigrate, isMigrationComplete } from './services/migration';
 
 type Page = 'chat' | 'entries' | 'insights';
 
@@ -15,6 +16,21 @@ function App() {
   const { isAuthenticated, user, logout } = useAuth();
   const { isDark } = useTheme();
   const [currentPage, setCurrentPage] = useState<Page>('chat');
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [migrationResult, setMigrationResult] = useState<{ imported: number; skipped: number; error?: string } | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id || migrationStatus !== 'idle') return;
+    if (!hasLocalSessionsToMigrate() || isMigrationComplete()) return;
+
+    setMigrationStatus('running');
+    runMigration(user.id)
+      .then((res) => {
+        setMigrationResult(res);
+        setMigrationStatus(res.error ? 'error' : 'done');
+      })
+      .catch(() => setMigrationStatus('error'));
+  }, [isAuthenticated, user?.id, migrationStatus]);
 
   if (!isAuthenticated) {
     return <LoginPage />;
@@ -95,6 +111,30 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
+        {migrationStatus === 'running' && (
+          <div
+            className="mb-4 rounded-lg px-4 py-3 text-sm"
+            style={{ backgroundColor: '#9333ea20', color: '#9333ea' }}
+          >
+            Migrating your entries to the database…
+          </div>
+        )}
+        {migrationStatus === 'done' && migrationResult && migrationResult.imported > 0 && (
+          <div
+            className="mb-4 rounded-lg px-4 py-3 text-sm"
+            style={{ backgroundColor: '#10b98120', color: '#059669' }}
+          >
+            Migrated {migrationResult.imported} entries. {migrationResult.skipped > 0 && `${migrationResult.skipped} already in database.`}
+          </div>
+        )}
+        {migrationStatus === 'error' && (
+          <div
+            className="mb-4 rounded-lg px-4 py-3 text-sm"
+            style={{ backgroundColor: '#ef444420', color: '#dc2626' }}
+          >
+            Migration failed. Entries remain in local storage. {migrationResult?.error}
+          </div>
+        )}
         <div className="max-w-4xl mx-auto h-full">
           {renderPage()}
         </div>

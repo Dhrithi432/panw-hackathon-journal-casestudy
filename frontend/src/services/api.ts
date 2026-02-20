@@ -201,4 +201,26 @@ export const apiService = {
     });
     if (!res.ok) throw new Error('Failed to delete session');
   },
+
+  async migrateSessions(userId: string, sessions: { id: string; title: string; messages: { id: string; role: string; content: string; timestamp: string }[] }[]): Promise<{ imported: number; skipped: number }> {
+    const res = await fetch(`${API_BASE_URL}/migrate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          title: s.title,
+          messages: s.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+          })),
+        })),
+      }),
+    });
+    if (!res.ok) throw new Error('Migration failed');
+    return res.json();
+  },
 };

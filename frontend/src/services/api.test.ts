@@ -114,6 +114,33 @@ describe('apiService', () => {
     })
   })
 
+  describe('migrateSessions', () => {
+    it('posts batches and returns imported/skipped', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ imported: 3, skipped: 1 }),
+      } as Response)
+
+      const result = await apiService.migrateSessions('user-1', [
+        { id: 's1', title: 'One', messages: [{ id: 'm1', role: 'user', content: 'Hi', timestamp: '2024-01-15T12:00:00Z' }] },
+      ])
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/migrate'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('user-1'),
+        })
+      )
+      expect(result).toEqual({ imported: 3, skipped: 1 })
+    })
+
+    it('throws when response not ok', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: false } as Response)
+      await expect(apiService.migrateSessions('u', [])).rejects.toThrow('Migration failed')
+    })
+  })
+
   describe('getOpeningPrompt', () => {
     it('fetches and returns opening prompt', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({

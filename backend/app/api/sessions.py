@@ -37,6 +37,32 @@ class SaveMessagesRequest(BaseModel):
     messages: List[dict]  # {id, role, content, timestamp}
 
 
+class MigrateSessionItem(BaseModel):
+    id: str
+    title: str
+    messages: List[dict]
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class MigrateRequest(BaseModel):
+    user_id: str
+    sessions: List[MigrateSessionItem]
+
+
+class MigrateResponse(BaseModel):
+    imported: int
+    skipped: int
+
+
+def _parse_timestamp(ts) -> datetime:
+    if ts is None:
+        return datetime.utcnow()
+    if isinstance(ts, str):
+        return datetime.fromisoformat(ts.replace("Z", "+00:00")) if "T" in ts else datetime.fromisoformat(ts)
+    return ts
+
+
 def _to_message_schema(m: DBMessage) -> MessageSchema:
     return MessageSchema(id=m.id, role=m.role, content=m.content, timestamp=m.timestamp)
 
@@ -161,3 +187,36 @@ async def delete_session(session_id: str, user_id: str, db: AsyncSession = Depen
     await db.delete(session)
     await db.commit()
     return {"ok": True}
+
+
+@router.post("/migrate", response_model=MigrateResponse)
+async def migrate_sessions(req: MigrateRequest, db: AsyncSession = Depends(get_db)):
+    """Import localStorage sessions. Skips sessions that already exist (conflict handling)."""
+    imported = 0
+    skipped = 0
+    for item in req.sessions:
+        result = await db.execute(
+            select(DBSession).where(DBSession.id == item.id, DBSession.user_id == req.user_id)
+        )
+        if result.scalar_one_or_none():
+            skipped += 1
+            continue
+        session = DBSession(
+            id=item.id,
+            user_id=req.user_id,
+            title=item.title or "New Entry",
+        )
+        db.add(session)
+        for msg in item.messages:
+            ts = _parse_timestamp(msg.get("timestamp"))
+            db_msg = DBMessage(
+                id=msg.get("id") or gen_id(),
+                session_id=item.id,
+                role=msg.get("role", "user"),
+                content=msg.get("content", ""),
+                timestamp=ts,
+            )
+            db.add(db_msg)
+        imported += 1
+    await db.commit()
+    return MigrateResponse(imported=imported, skipped=skipped)

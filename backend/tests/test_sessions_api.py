@@ -61,3 +61,48 @@ async def test_get_session_404_wrong_user(client: AsyncClient):
     sid = create.json()["id"]
     res = await client.get(f"/api/sessions/{sid}?user_id=user-b")
     assert res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_migrate_imports_sessions(client: AsyncClient):
+    """Migrate endpoint imports localStorage-style sessions."""
+    mid, sid = str(uuid.uuid4()), str(uuid.uuid4())
+    payload = {
+        "user_id": "user-1",
+        "sessions": [
+            {
+                "id": sid,
+                "title": "First",
+                "messages": [
+                    {"id": mid, "role": "user", "content": "Hi", "timestamp": "2024-01-15T12:00:00Z"},
+                ],
+            },
+        ],
+    }
+    res = await client.post("/api/migrate", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["imported"] == 1
+    assert data["skipped"] == 0
+    list_res = await client.get("/api/sessions?user_id=user-1")
+    ids = [s["id"] for s in list_res.json()]
+    assert sid in ids
+
+
+@pytest.mark.asyncio
+async def test_migrate_skips_existing(client: AsyncClient):
+    """Migrate skips sessions that already exist (conflict handling)."""
+    mid1, mid2 = str(uuid.uuid4()), str(uuid.uuid4())
+    sess_id = str(uuid.uuid4())
+    payload = {
+        "user_id": "user-1",
+        "sessions": [
+            {"id": sess_id, "title": "Original", "messages": [{"id": mid1, "role": "user", "content": "A", "timestamp": "2024-01-15T12:00:00Z"}]},
+        ],
+    }
+    res1 = await client.post("/api/migrate", json=payload)
+    assert res1.json()["imported"] == 1
+    payload["sessions"][0]["messages"][0]["id"] = mid2
+    res2 = await client.post("/api/migrate", json=payload)
+    assert res2.json()["imported"] == 0
+    assert res2.json()["skipped"] == 1
