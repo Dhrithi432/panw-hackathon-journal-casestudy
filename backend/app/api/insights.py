@@ -142,6 +142,8 @@ Respond with ONLY valid JSON:
         insights = json.loads(response_text)
         return UnifiedInsights(**insights)
     
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error generating insights: {e}")
         raise HTTPException(status_code=500, detail=str(e))

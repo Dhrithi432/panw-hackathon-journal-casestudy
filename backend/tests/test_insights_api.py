@@ -1,16 +1,18 @@
 """Tests for insights API endpoint."""
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
 async def test_insights_unified_returns_503_when_no_api_key(client: AsyncClient):
-    """Insights endpoint returns 503 when Anthropic client is not configured."""
-    from unittest.mock import MagicMock
-    mock_svc = MagicMock()
-    mock_svc.client = None  # Falsy - triggers 503
-    with patch("app.api.insights.anthropic_service", mock_svc):
+    """Insights returns 503 when Anthropic client is not configured."""
+    import app.api.insights as insights_mod
+    no_client_svc = MagicMock()
+    no_client_svc.client = None
+    original = insights_mod.anthropic_service
+    insights_mod.anthropic_service = no_client_svc
+    try:
         response = await client.post(
             "/api/insights/unified",
             json={
@@ -21,8 +23,10 @@ async def test_insights_unified_returns_503_when_no_api_key(client: AsyncClient)
                 "total_messages": 3,
             },
         )
-        assert response.status_code == 503
+        assert response.status_code == 503, f"Expected 503, got {response.status_code}: {response.text}"
         assert "API key" in response.json()["detail"]
+    finally:
+        insights_mod.anthropic_service = original
 
 
 @pytest.mark.asyncio

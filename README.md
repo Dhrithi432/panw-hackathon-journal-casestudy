@@ -86,6 +86,28 @@ The backend also exposes a root message and a **GET `/health`** endpoint for liv
 
 ---
 
+## Running Tests
+
+### Backend (pytest)
+```bash
+cd backend
+pip install pytest pytest-asyncio  # if not already installed
+python -m pytest tests/ -v
+```
+
+### Frontend (Vitest)
+```bash
+cd frontend
+npm install
+npm run test:run
+```
+
+Tests cover:
+- **Backend**: API endpoints (chat, opening prompt, insights), Pydantic models, mock AI service, config, and Anthropic service behavior
+- **Frontend**: Utils, API service, Auth/Theme contexts, Login/Chat/Entries/Insights pages, UI components (Button, Input, Card, WordCloud, ThemeToggle)
+
+---
+
 ## Future Enhancements
 
 - **Persistence** — Move journal entries and user accounts to a real database and optional cloud sync.
