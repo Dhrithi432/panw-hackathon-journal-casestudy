@@ -46,6 +46,72 @@ describe('apiService', () => {
         apiService.sendMessage([{ role: 'user', content: 'Hi' }], 'user-1')
       ).rejects.toThrow('Failed to send message')
     })
+
+    it('truncates to last 30 messages when over limit', async () => {
+      const mockResponse = { message: 'OK', timestamp: new Date().toISOString() }
+      vi.mocked(fetch)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ summary: 'Prior context.' }) } as Response)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockResponse) } as Response)
+
+      const manyMessages = Array.from({ length: 50 }, (_, i) => ({
+        role: (i % 2 === 0 ? 'user' : 'assistant') as const,
+        content: `msg${i}`,
+      }))
+
+      await apiService.sendMessage(manyMessages, 'user-1')
+
+      const summarizeCall = vi.mocked(fetch).mock.calls[0]
+      expect(summarizeCall[0]).toContain('/summarize')
+      const chatCallBody = JSON.parse(vi.mocked(fetch).mock.calls[1][1]!.body as string)
+      expect(chatCallBody.messages).toHaveLength(29)
+      expect(chatCallBody.context_summary).toBe('Prior context.')
+      expect(chatCallBody.messages[0].content).toBe('msg21')
+    })
+
+    it('falls back to truncation when summarize fails', async () => {
+      vi.mocked(fetch)
+        .mockResolvedValueOnce({ ok: false } as Response)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ message: 'OK', timestamp: new Date().toISOString() }) } as Response)
+
+      const manyMessages = Array.from({ length: 40 }, (_, i) => ({
+        role: (i % 2 === 0 ? 'user' : 'assistant') as const,
+        content: `msg${i}`,
+      }))
+
+      await apiService.sendMessage(manyMessages, 'user-1')
+
+      const chatCallBody = JSON.parse(vi.mocked(fetch).mock.calls[1][1]!.body as string)
+      expect(chatCallBody.messages).toHaveLength(30)
+      expect(chatCallBody.context_summary).toBeUndefined()
+    })
+  })
+
+  describe('summarize', () => {
+    it('posts to /summarize and returns summary', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ summary: 'User reflected on work stress.' }),
+      } as Response)
+
+      const result = await apiService.summarize([
+        { role: 'user', content: 'Work is tough' },
+        { role: 'assistant', content: 'I understand.' },
+      ])
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/summarize'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ messages: [{ role: 'user', content: 'Work is tough' }, { role: 'assistant', content: 'I understand.' }] }),
+        })
+      )
+      expect(result).toBe('User reflected on work stress.')
+    })
+
+    it('throws when response is not ok', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: false } as Response)
+      await expect(apiService.summarize([{ role: 'user', content: 'Hi' }])).rejects.toThrow('Failed to summarize')
+    })
   })
 
   describe('getOpeningPrompt', () => {

@@ -51,4 +51,5 @@ describe('ChatPage', () => {
       expect(api.apiService.sendMessage).toHaveBeenCalled()
     })
   })
+
 })

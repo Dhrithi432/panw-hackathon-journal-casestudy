@@ -76,3 +76,59 @@ async def test_chat_with_real_ai_uses_anthropic(
             )
             assert response.status_code == 200
             assert response.json()["message"] == "Mocked AI response"
+
+
+@pytest.mark.asyncio
+async def test_chat_truncates_large_history(client: AsyncClient):
+    """Chat truncates to last 30 messages when payload exceeds limit."""
+    with patch("app.api.chat.settings") as mock_settings:
+        mock_settings.use_mock_ai = True
+        with patch("app.api.chat.mock_ai_service") as mock_ai:
+            mock_ai.chat = AsyncMock(return_value="Thanks for sharing.")
+            messages = [
+                {"role": "user", "content": f"Message {i}"} if i % 2 == 0
+                else {"role": "assistant", "content": f"Reply {i}"}
+                for i in range(50)
+            ]
+            response = await client.post(
+                "/api/chat",
+                json={"messages": messages, "user_id": "test"},
+            )
+            assert response.status_code == 200
+            call_args = mock_ai.chat.call_args[0][0]
+            assert len(call_args) == 30
+            assert call_args[0]["content"] == "Message 20"
+
+
+@pytest.mark.asyncio
+async def test_summarize_endpoint(client: AsyncClient):
+    """Summarize endpoint returns a summary of messages."""
+    with patch("app.api.chat.anthropic_service") as mock_anthropic:
+        mock_anthropic.summarize = AsyncMock(return_value="User discussed work stress and deadlines.")
+        response = await client.post(
+            "/api/summarize",
+            json={"messages": [{"role": "user", "content": "Work is hard"}, {"role": "assistant", "content": "I hear you."}]},
+        )
+        assert response.status_code == 200
+        assert response.json()["summary"] == "User discussed work stress and deadlines."
+
+
+@pytest.mark.asyncio
+async def test_chat_with_context_summary(client: AsyncClient):
+    """Chat passes context_summary to anthropic when provided."""
+    with patch("app.api.chat.settings") as mock_settings:
+        mock_settings.use_mock_ai = False
+        with patch("app.api.chat.anthropic_service") as mock_anthropic:
+            mock_anthropic.chat = AsyncMock(return_value="I remember. How are you feeling now?")
+            response = await client.post(
+                "/api/chat",
+                json={
+                    "messages": [{"role": "user", "content": "Follow-up"}],
+                    "user_id": "test",
+                    "context_summary": "Earlier: user felt stressed about work.",
+                },
+            )
+            assert response.status_code == 200
+            mock_anthropic.chat.assert_called_once()
+            call_kwargs = mock_anthropic.chat.call_args[1]
+            assert call_kwargs["context_summary"] == "Earlier: user felt stressed about work."

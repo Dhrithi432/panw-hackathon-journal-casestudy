@@ -1,3 +1,5 @@
+import { truncateMessages, splitForSummarization, MAX_CONTEXT_MESSAGES } from '@/lib/utils';
+
 const API_BASE_URL = 'https://panw-hackathon-journal-casestudy-production.up.railway.app/api';
 
 //  const API_BASE_URL = 'http://localhost:8000/api';
@@ -68,16 +70,41 @@ export interface UnifiedInsights {
 
 // API Service
 export const apiService = {
-  // Chat methods
+  async summarize(messages: Message[]): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/summarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    });
+    if (!response.ok) throw new Error('Failed to summarize');
+    const data = await response.json();
+    return data.summary;
+  },
+
   async sendMessage(messages: Message[], userId: string): Promise<string> {
+    const { old, recent } = splitForSummarization(messages, MAX_CONTEXT_MESSAGES);
+    let messagesToSend = recent;
+    let contextSummary: string | undefined;
+
+    if (old.length > 0) {
+      try {
+        contextSummary = await this.summarize(old);
+      } catch {
+        messagesToSend = truncateMessages(messages);
+      }
+    } else {
+      messagesToSend = truncateMessages(messages);
+    }
+
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        messages,
+        messages: messagesToSend,
         user_id: userId,
+        ...(contextSummary && { context_summary: contextSummary }),
       }),
     });
 
