@@ -1,19 +1,19 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 from app.core.anthropic_service import anthropic_service
 
 router = APIRouter()
 
 class JournalEntry(BaseModel):
-    date: str
-    message_count: int
-    sample_messages: List[str]
+    date: str = Field(..., max_length=20)
+    message_count: int = Field(..., ge=0, le=10000)
+    sample_messages: List[str] = Field(..., max_length=100)
 
 class InsightsRequest(BaseModel):
-    entries: List[JournalEntry]
-    total_days_active: int
-    total_messages: int
+    entries: List[JournalEntry] = Field(..., max_length=500)
+    total_days_active: int = Field(..., ge=0, le=10000)
+    total_messages: int = Field(..., ge=0, le=100000)
 
 class ThemeNode(BaseModel):
     theme: str

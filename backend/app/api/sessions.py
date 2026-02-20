@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
 
@@ -29,25 +29,25 @@ class SessionSchema(BaseModel):
 
 
 class CreateSessionRequest(BaseModel):
-    user_id: str
-    title: str = "New Entry"
+    user_id: str = Field(..., max_length=128)
+    title: str = Field("New Entry", max_length=200)
 
 
 class SaveMessagesRequest(BaseModel):
-    messages: List[dict]  # {id, role, content, timestamp}
+    messages: List[dict] = Field(..., max_length=500)  # {id, role, content, timestamp}
 
 
 class MigrateSessionItem(BaseModel):
-    id: str
-    title: str
-    messages: List[dict]
+    id: str = Field(..., max_length=64)
+    title: str = Field(..., max_length=200)
+    messages: List[dict] = Field(..., max_length=500)
     created_at: str | None = None
     updated_at: str | None = None
 
 
 class MigrateRequest(BaseModel):
-    user_id: str
-    sessions: List[MigrateSessionItem]
+    user_id: str = Field(..., max_length=128)
+    sessions: List[MigrateSessionItem] = Field(..., max_length=500)
 
 
 class MigrateResponse(BaseModel):
